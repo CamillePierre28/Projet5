@@ -108,3 +108,7 @@ L’objectif est d’identifier le modèle offrant le meilleur compromis entre p
 ## Auteur
 
 Projet réalisé dans un cadre pédagogique de data science.
+
+
+A ajouter : 
+Les catégories inconnues sont ignorées (encodées à 0) par le pipeline.

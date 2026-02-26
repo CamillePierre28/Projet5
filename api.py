@@ -5,7 +5,8 @@ from typing import Optional
 import joblib
 import pandas as pd
 from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel, Field, ConfigDict, field_validator
+from pydantic import BaseModel, Field, ConfigDict
+from contextlib import asynccontextmanager
 
 # Ce code : 
 # Charge un modèle de régression logistique sauvegardé
@@ -89,19 +90,45 @@ class FrequenceDeplacement(str, Enum):
     Frequent = "Frequent"
 
 # Modèle de requête (données envoyées à l’API)
+# class PredictRequest(BaseModel):
+#     # Interdit les champs non définis dans le modèle
+#     model_config = ConfigDict(extra="forbid")
+
+#     # Champ optionnel, entre 18 et 60
+#     age: Optional[float] = Field(default=None, ge=18, le=60)
+#     # Revenu >= 0
+#     revenu_mensuel: Optional[float] = Field(default=None, ge=0)
+#     # Enum défini plus haut
+#     frequence_deplacement: Optional[FrequenceDeplacement] = None
+#     # Champs texte optionnels
+#     departement: Optional[str] = None
+#     poste: Optional[str] = None
+
+
 class PredictRequest(BaseModel):
-    # Interdit les champs non définis dans le modèle
     model_config = ConfigDict(extra="forbid")
 
-    # Champ optionnel, entre 18 et 60
     age: Optional[float] = Field(default=None, ge=18, le=60)
-    # Revenu >= 0
     revenu_mensuel: Optional[float] = Field(default=None, ge=0)
-    # Enum défini plus haut
     frequence_deplacement: Optional[FrequenceDeplacement] = None
-    # Champs texte optionnels
     departement: Optional[str] = None
     poste: Optional[str] = None
+
+    satisfaction_globale: Optional[float] = None
+    distance_domicile_travail: Optional[float] = Field(default=None, ge=0)
+    annees_dans_l_entreprise: Optional[float] = Field(default=None, ge=0)
+    nb_formations_suivies: Optional[float] = Field(default=None, ge=0)
+    nombre_experiences_precedentes: Optional[float] = Field(default=None, ge=0)
+    domaine_etude: Optional[str] = None
+    genre: Optional[float] = None
+    note_evaluation: Optional[float] = None
+    annees_depuis_la_derniere_promotion: Optional[float] = Field(default=None, ge=0)
+    niveau_hierarchique_poste: Optional[float] = Field(default=None, ge=0)
+    augmentation_salaire_precedente: Optional[float] = None
+    heure_supplementaires: Optional[float] = None
+    nombre_participation_pee: Optional[float] = Field(default=None, ge=0)
+    statut_marital: Optional[str] = None
+    niveau_education: Optional[float] = None
 
 # Modèle de réponse renvoyé par l’API
 class PredictResponse(BaseModel):
@@ -111,16 +138,17 @@ class PredictResponse(BaseModel):
     probability: Optional[float] = Field(default=None, ge=0, le=1)
 
 ####################################### API #######################################
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    get_model()  # charge le modèle au démarrage
+    yield        # l'app tourne
+
 # Création de l’application FastAPI
 app = FastAPI(
     title="API Attrition - Régression Logistique",
-    version="1.0.0"
+    version="1.0.0",
+    lifespan=lifespan,
 )
-
-# Événement déclenché au démarrage du serveur
-@app.on_event("startup")
-def startup():
-    get_model()     # Charge le modèle en mémoire dès le démarrage
 
 # Route GET simple pour vérifier que l’API fonctionne
 @app.get("/health")
