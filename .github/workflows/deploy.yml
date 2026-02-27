@@ -37,7 +37,8 @@ jobs:
             --exclude ".github" \
             --exclude ".venv" \
             --exclude "__pycache__" \
-            ./ hf_space/
+            --exclude "hf_space/" \
+            ./ hf_space/ || true
 
       - name: Commit & push to Hugging Face Space
         working-directory: hf_space
