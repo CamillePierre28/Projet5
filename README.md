@@ -1,3 +1,16 @@
+---
+title: Projet5 Staging
+emoji: 🧪
+colorFrom: blue
+colorTo: green
+sdk: docker
+pinned: false
+---
+
+# Projet5 - Staging
+
+API FastAPI pour la prédiction d’attrition.
+
 # Projet de Data Science : Analyse exploratoire et modélisation
 
 ## Objectif du projet
