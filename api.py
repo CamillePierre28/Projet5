@@ -171,3 +171,11 @@ def predict(req: PredictRequest):
 @app.get("/model-info", tags=["debug"], summary="Infos sur le modèle (colonnes attendues)")
 def model_info():
     return {"expected_columns": EXPECTED_COLUMNS}
+
+# Pour afficher quelque chose de propre dans la page principale sur Hugging face
+@app.get("/")
+def root():
+    return {
+        "message": "API Attrition en ligne",
+        "endpoints": ["/health", "/docs", "/predict", "/model-info"]
+    }
