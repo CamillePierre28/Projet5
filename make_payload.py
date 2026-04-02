@@ -1,6 +1,10 @@
 import pandas as pd
 import json
 
+# Ce code charge le fichier csv df1 avec pandas, sélectionne une ligne spécifique du dataset (donc un individu), 
+# la convertit en dictionnaire compatible JSON en remplaçant les valeurs manquantes (NaN) par None, 
+# puis affiche le résultat formaté en JSON afin qu'il puisse être utilisable dans l'API.  
+
 DATA_PATH = "data/df1.csv"
 
 # Charge le dataset

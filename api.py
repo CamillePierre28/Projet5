@@ -2,11 +2,15 @@ from enum import Enum
 from pathlib import Path
 from typing import Optional
 
+import os
+import secrets
 import joblib
 import pandas as pd
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Depends, Security, status
+from fastapi.security import APIKeyHeader
 from pydantic import BaseModel, Field, ConfigDict
 from contextlib import asynccontextmanager
+from db.save_predictions import save_prediction
 
 # Ce code : 
 # Charge un modèle de régression logistique sauvegardé
@@ -82,6 +86,70 @@ def predict_payload(payload: dict):
     # Retourne prédiction + probabilité
     return pred, proba
 
+####################################### AUTHENTIFICATION #######################################
+
+# Définit le header HTTP attendu côté client pour transmettre la clé API
+# Exemple côté client : X-API-Key: ma_cle_secrete
+api_key_header = APIKeyHeader(name="X-API-Key", auto_error=False)
+
+
+def load_api_keys() -> set[str]:
+    """
+    Charge les clés API depuis les variables d'environnement.
+
+    Supporte deux formats :
+    - API_KEYS=key1,key2,key3
+    - API_KEY=key_unique
+    """
+    keys = set()
+
+    # Récupère plusieurs clés éventuelles séparées par des virgules
+    raw_keys = os.getenv("API_KEYS")
+
+    # Récupère une clé unique éventuelle
+    raw_single = os.getenv("API_KEY")
+
+    # Si plusieurs clés sont fournies, on les découpe et on enlève les espaces inutiles
+    if raw_keys:
+        keys.update(k.strip() for k in raw_keys.split(",") if k.strip())
+
+    # Si une seule clé est fournie, on l'ajoute aussi
+    if raw_single:
+        keys.add(raw_single.strip())
+
+    return keys
+
+
+# Dépendance FastAPI qui vérifie si la clé API envoyée par le client est valide
+def require_api_key(api_key: str = Security(api_key_header)):
+    # Charge les clés autorisées côté serveur
+    valid_keys = load_api_keys()
+
+    # Si aucune clé n'est configurée, c'est un problème serveur
+    if not valid_keys:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Aucune clé API configurée côté serveur."
+        )
+
+    # Si le client n'a pas fourni de clé API
+    if not api_key:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Clé API manquante. Ajoute le header X-API-Key."
+        )
+
+    # Vérifie que la clé envoyée correspond à une clé valide
+    # compare_digest est plus sûr qu'une comparaison classique
+    if not any(secrets.compare_digest(api_key, valid) for valid in valid_keys):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Clé API invalide."
+        )
+
+    # Retourne la clé si elle est valide
+    return api_key
+
 ####################################### VALIDATION DES DONNEES #######################################
 # Enumération pour limiter les valeurs possibles (empêche l'utilisateur d'envoyer autre chose que ces trois valeurs)
 class FrequenceDeplacement(str, Enum):
@@ -90,21 +158,6 @@ class FrequenceDeplacement(str, Enum):
     Frequent = "Frequent"
 
 # Modèle de requête (données envoyées à l’API)
-# class PredictRequest(BaseModel):
-#     # Interdit les champs non définis dans le modèle
-#     model_config = ConfigDict(extra="forbid")
-
-#     # Champ optionnel, entre 18 et 60
-#     age: Optional[float] = Field(default=None, ge=18, le=60)
-#     # Revenu >= 0
-#     revenu_mensuel: Optional[float] = Field(default=None, ge=0)
-#     # Enum défini plus haut
-#     frequence_deplacement: Optional[FrequenceDeplacement] = None
-#     # Champs texte optionnels
-#     departement: Optional[str] = None
-#     poste: Optional[str] = None
-
-
 class PredictRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -157,25 +210,37 @@ def health():
 
 # Route POST pour faire une prédiction
 @app.post("/predict", response_model=PredictResponse)
-def predict(req: PredictRequest):
+def predict(req: PredictRequest, _: str = Depends(require_api_key)):
     try:
-        # Convertit l’objet Pydantic en dictionnaire
-        pred, proba = predict_payload(req.model_dump())
-        # Retourne la réponse structurée
+        input_data = req.model_dump()
+
+        pred, proba = predict_payload(input_data)
+
+        save_prediction(
+            input_data=input_data,
+            output_data={
+                "prediction": pred,
+                "probability": proba,
+            },
+            model_name="logreg_pipeline",
+            model_version="1.0.0",
+        )
+
         return PredictResponse(prediction=pred, probability=proba)
-    # Si erreur → retourne erreur HTTP 400
+
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
 # Route pour voir les colonnes attendues par le modèle
 @app.get("/model-info", tags=["debug"], summary="Infos sur le modèle (colonnes attendues)")
-def model_info():
+def model_info(_: str = Depends(require_api_key)):
     return {"expected_columns": EXPECTED_COLUMNS}
 
-# Pour afficher quelque chose de propre dans la page principale sur Hugging face
+# Pour afficher quelque chose de propre dans la page principale sur Hugging Face
 @app.get("/")
 def root():
     return {
         "message": "API Attrition en ligne",
-        "endpoints": ["/health", "/docs", "/predict", "/model-info"]
+        "endpoints": ["/health", "/docs", "/predict", "/model-info"],
+        "auth": "Ajouter le header X-API-Key pour accéder aux endpoints protégés"
     }

@@ -1,10 +1,60 @@
 # Python-generated files
 __pycache__/
-*.py[oc]
+*.py[cod]
+*$py.class
 build/
 dist/
 wheels/
-*.egg-info
+*.egg-info/
+.eggs/
 
 # Virtual environments
-.venv
+.venv/
+venv/
+env/
+
+# Pytest / coverage
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Jupyter notebooks
+.ipynb_checkpoints/
+
+# Environment variables / secrets
+.env
+.env.*
+!.env.example
+
+# IDE / editors
+.vscode/
+.idea/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Local database / temp files
+*.sqlite3
+*.db
+
+# Python tooling caches
+.mypy_cache/
+.ruff_cache/
+
+# Local certificates
+certs/*.pem
+certs/
+
+# Autres
+ancienrequirements.txt
+ancienpyprojecttoml.txt
+main.py
+ancienREADME.txt
+ci.backup
+deploy.backup
+divers/
+generate_tree.py
