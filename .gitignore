@@ -45,10 +45,6 @@ Thumbs.db
 .mypy_cache/
 .ruff_cache/
 
-# Local certificates
-certs/*.pem
-certs/
-
 # Autres
 ancienrequirements.txt
 ancienpyprojecttoml.txt
