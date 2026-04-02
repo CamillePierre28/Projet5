@@ -370,6 +370,7 @@ Le projet applique plusieurs bonnes pratiques de sécurité :
 
 ## Structure du projet
 
+```
 Classifiez_automatiquement_des_informations
 ├── .github
 │   └── workflows
@@ -412,6 +413,7 @@ Classifiez_automatiquement_des_informations
 ├── requirements.txt
 ├── STAGING.md
 └── uv.lock
+```
 
 ## Couverture de tests
 
